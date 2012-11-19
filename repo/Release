@@ -1,0 +1,7 @@
+Origin: NXEngine-iOS dev
+Label: NXEngine-iOS
+Suite: stable
+Version: 1.0
+Architectures: iphoneos-arm
+Components: main
+Description: Repository with the development version of NXEngine-iOS
