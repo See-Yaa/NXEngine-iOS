@@ -37,7 +37,7 @@ private:
 	void ExpandCommand();
 	
 	char fLine[CONSOLE_MAXCMDLEN];
-	int fLineLen;
+	size_t fLineLen;
 	int fKeyDown;
 	int fRepeatTimer;
 	

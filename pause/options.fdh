@@ -19,14 +19,6 @@ bool settings_save(Settings *setfile);
 void Clear();
 
 
-/* located in input.cpp */
-
-//-----------------[referenced from pause/options.cpp]---------------//
-bool justpushed(int k);
-int input_get_mapping(int keyindex);
-const char *input_get_name(int index);
-void input_remap(int keyindex, int sdl_key);
-
 
 /* located in replay.cpp */
 

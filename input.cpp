@@ -1,16 +1,23 @@
 #include <map>
 
+#include "config.h"
 
 #include "nx.h"
-#include "input.fdh"
+#include "input.h"
 
 
 #include "vjoy.h"
 
-typedef std::map<SDL_Keycode, INPUTS> mappings_t;
+#include <SDL.h>
+
+
+static int IsNonConsoleKey(int key);
+
+
+typedef std::map<Keycode, INPUTS> mappings_t;
 mappings_t mappings;
 
-INPUTS have_mapping(SDL_Keycode keycode)
+INPUTS have_mapping(Keycode keycode)
 {
 	mappings_t::const_iterator it = mappings.find(keycode);
 	if (it != mappings.end())
@@ -66,29 +73,29 @@ bool input_init(void)
 
 
 // set the SDL key that triggers an input
-void input_remap(int keyindex, int sdl_key)
+void input_remap(INPUTS keyindex, Keycode sdl_key)
 {
 	stat("input_remap(%d => %d)", keyindex, sdl_key);
-	int old_mapping = input_get_mapping(keyindex);
+	Keycode old_mapping = input_get_mapping(keyindex);
 	if (old_mapping != -1)
 	{
-		mappings.erase(static_cast<SDL_Keycode>(old_mapping));
+		mappings.erase(static_cast<Keycode>(old_mapping));
 	}
 
-	mappings[static_cast<SDL_Keycode>(sdl_key)] = static_cast<INPUTS>(keyindex);
+	mappings[sdl_key] = keyindex;
 }
 
 // get which SDL key triggers a given input
-int input_get_mapping(int keyindex)
+Keycode input_get_mapping(INPUTS keyindex)
 {
 	mappings_t::const_iterator end = mappings.end();
 	for(mappings_t::const_iterator it = mappings.begin(); it != end; ++it)
 	{
-		if (it->second == static_cast<INPUTS>(keyindex))
+		if (it->second == keyindex)
 			return it->first;
 	}
 	
-	return -1;
+	return static_cast<Keycode>(-1);
 }
 
 const char *input_get_name(int index)
@@ -114,7 +121,7 @@ void input_set_mappings(int *array)
 	mappings.clear();
 	for(int i=0;i<INPUT_COUNT;i++)
 	{
-		mappings[array[i]] = static_cast<INPUTS>(i);
+		mappings[static_cast<Keycode>(array[i])] = static_cast<INPUTS>(i);
 	}
 }
 
@@ -124,8 +131,9 @@ void c------------------------------() {}
 
 void input_poll(void)
 {
-SDL_Event evt;
-int ino, key;
+    SDL_Event evt;
+    INPUTS ino;
+    Keycode key;
 	
 	while(SDL_PollEvent(&evt))
 	{
@@ -212,6 +220,7 @@ int ino, key;
 			}
 			break;
 
+#ifdef CONFIG_USE_VJOY
 			case SDL_FINGERUP:
 			case SDL_FINGERDOWN:
 			case SDL_FINGERMOTION:
@@ -219,6 +228,7 @@ int ino, key;
 				VJoy::InjectInputEvent(evt);
 			}
 			break;
+#endif
 			
 			case SDL_QUIT:
 			{
@@ -230,7 +240,9 @@ int ino, key;
 		}
 	}
 
+#ifdef CONFIG_USE_VJOY
 	VJoy::ProcessInput();
+#endif
 }
 
 // keys that we don't want to send to the console

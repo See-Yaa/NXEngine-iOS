@@ -8,6 +8,7 @@
 #include "replay.h"
 #include "settings.fdh"
 #include "platform.h"
+#include "input.h"
 
 const char *setfilename = "settings.dat";
 const uint16_t SETTINGS_VERSION = 0x1602;		// serves as both a version and magic
@@ -110,7 +111,7 @@ FILE *fp;
 	}
 	
 	for(int i=0;i<INPUT_COUNT;i++)
-		setfile->input_mappings[i] = input_get_mapping(i);
+		setfile->input_mappings[i] = input_get_mapping(static_cast<INPUTS>(i));
 	
 	setfile->version = SETTINGS_VERSION;
 	fwrite(setfile, sizeof(Settings), 1, fp);

@@ -15,11 +15,7 @@ bool settings_save(Settings *setfile);
 //FILE *fileopen(const char *fname, const char *mode);
 
 
-/* located in input.cpp */
 
-//-------------------[referenced from settings.cpp]------------------//
-void input_set_mappings(int *array);
-int input_get_mapping(int keyindex);
 
 
 /* located in common/stat.cpp */

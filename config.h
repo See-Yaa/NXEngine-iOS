@@ -9,6 +9,10 @@
 // bitmap fonts will be supported.
 #define CONFIG_ENABLE_TTF
 
+
+#define CONFIG_USE_SDL2
+
+
 // include the Doukutsu data-file extractor in the build
 // (it's needed only the first time the program is run).
 //#define CONFIG_DATA_EXTRACTOR
@@ -16,7 +20,12 @@
 // do image scaling in hardware via OpenGL
 //#define CONFIG_OPENGL
 
+
+#ifdef CONFIG_USE_SDL2
 // show virtual joystick
-#define CONFIG_USE_VJOY
+# define CONFIG_USE_VJOY
+#endif 
+
+
 
 #endif

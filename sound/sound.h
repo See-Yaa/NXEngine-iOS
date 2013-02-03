@@ -91,5 +91,12 @@
 
 
 void sound(int snd);
+void music(int songno);
+int music_lastsong();
+void StartStreamSound(int freq);
+void StartPropSound(void);
+void StopLoopSounds(void);
+
+void org_fade(void);
 
 #endif 

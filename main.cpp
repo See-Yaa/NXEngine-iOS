@@ -40,6 +40,8 @@ bool freshstart;
 		return 1;
 	}
 	atexit(SDL_Quit);
+    
+    stat(argv[0]);
 	
 	// start up inputs first thing because settings_load may remap them
 	input_init();
@@ -340,7 +342,9 @@ static int frameskip = 0;
 			update_fps();
 		}
 
+#ifdef CONFIG_USE_VJOY
 		VJoy::DrawAll();
+#endif
 		
 		if (!flipacceltime)
 		{

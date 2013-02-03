@@ -2,6 +2,16 @@
 #ifndef _INPUT_H
 #define _INPUT_H
 
+#include "config.h"
+#include <SDL.h>
+
+#ifdef CONFIG_USE_SDL2
+typedef SDL_Keycode Keycode;
+#else
+typedef SDLKey Keycode;
+#endif
+
+
 enum INPUTS
 {
 	LEFTKEY, RIGHTKEY, UPKEY, DOWNKEY,
@@ -41,4 +51,10 @@ extern bool inputs[INPUT_COUNT];
 extern bool lastinputs[INPUT_COUNT];
 extern int last_sdl_key;
 
+
+void input_set_mappings(int *array);
+Keycode input_get_mapping(INPUTS keyindex);
+bool justpushed(int k);
+const char *input_get_name(int index);
+void input_remap(INPUTS keyindex, Keycode sdl_key);
 #endif

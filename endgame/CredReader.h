@@ -43,7 +43,7 @@ private:
 	char peek();
 
 	char *data;
-	int dataindex, datalen;
+	size_t dataindex, datalen;
 };
 
 

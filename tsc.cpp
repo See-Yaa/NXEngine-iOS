@@ -5,7 +5,32 @@
 #include "common/DBuffer.h"
 #include "vararray.h"
 #include "tsc.h"
-#include "tsc.fdh"
+#include "map.h"
+#include "niku.h"
+#include "inventory.h"
+#include "player.h"
+#include "playerstats.h"
+#include "sound/sound.h"
+#include "endgame/credits.h"
+#include "debug.h"
+
+
+static int MnemonicToIndex(const char *str);
+static char nextchar(const char **buf, const char *buf_end);
+static int ReadNumber(const char **buf, const char *buf_end);
+static void ReadText(DBuffer *script, const char **buf, const char *buf_end);
+bool tsc_load(const char *fname, int pageno);
+char *tsc_decrypt(const char *fname, size_t *fsize_out);
+bool tsc_compile(const char *buf, size_t bufsize, int pageno);
+void ExecScript(ScriptInstance *s);
+void crtoslashn(const char *in, char *out);
+void DoANP(Object *o, int p1, int p2);
+void DoCNP(Object *o, int p1, int p2);
+void NPCDo(int id2, int p1, int p2, void (*action_function)(Object *o, int p1, int p2));
+void DoDNP(Object *o, int p1, int p2);
+void SetCSDir(Object *o, int csdir);
+void SetPDir(int d);
+bool contains_non_cr(const char *str);
 
 #define TRACE_SCRIPT
 
@@ -47,6 +72,7 @@ struct TSCCommandTable
 unsigned char codealphabet[] = { "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123+-" };
 unsigned char letter_to_code[256];
 unsigned char mnemonic_lookup[32*32*32];
+
 
 
 static void GenLTC(void)
@@ -131,7 +157,7 @@ void tsc_close(void)
 bool tsc_load(const char *fname, int pageno)
 {
 ScriptPage *page = &script_pages[pageno];
-int fsize;
+size_t fsize;
 char *buf;
 bool result;
 
@@ -158,10 +184,11 @@ bool result;
 }
 
 
-char *tsc_decrypt(const char *fname, int *fsize_out)
+char *tsc_decrypt(const char *fname, size_t *fsize_out)
 {
 FILE *fp;
-int fsize, i;
+size_t fsize;
+int i;
 
 	fp = fileopenRO(fname);
 	if (!fp)
@@ -198,7 +225,7 @@ void c------------------------------() {}
 
 // compile a tsc file--a set of scripts in raw text format--into 'bytecode',
 // and place the finished scripts into the given page.
-bool tsc_compile(const char *buf, int bufsize, int pageno)
+bool tsc_compile(const char *buf, size_t bufsize, int pageno)
 {
 ScriptPage *page = &script_pages[pageno];
 const char *buf_end = (buf + (bufsize - 1));

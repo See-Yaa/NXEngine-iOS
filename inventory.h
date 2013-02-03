@@ -34,6 +34,8 @@ struct stInventory
 bool inventory_init(int param);
 void inventory_tick(void);
 
+void UnlockInventoryInput(void);
+
 enum INVENTORY
 {
 	ITEM_ARTHURS_KEY = 1,

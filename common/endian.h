@@ -9,7 +9,13 @@
 #ifndef CaveStory_endian_h
 #define CaveStory_endian_h
 
-#include <endian.h>
+#ifdef __APPLE__
+# ifdef __IPHONE_OS__
+#  include <endian.h>
+#else
+#  include <machine/endian.h>
+# endif
+#endif
 
 #if !defined(htole16)
 # if defined(__APPLE__)

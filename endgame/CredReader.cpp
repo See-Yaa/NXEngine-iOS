@@ -1,7 +1,8 @@
 
 #include "../nx.h"
 #include "CredReader.h"
-#include "CredReader.fdh"
+
+#include "tsc.h"
 
 /*
 CREDITS FORMAT (credit.tsc)

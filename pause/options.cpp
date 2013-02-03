@@ -4,6 +4,7 @@
 #include "options.h"
 #include "dialog.h"
 #include "message.h"
+#include "input.h"
 using namespace Options;
 #include "options.fdh"
 FocusStack optionstack;
@@ -388,8 +389,8 @@ Dialog *dlg = opt.dlg;
 
 static void _upd_control(ODItem *item)
 {
-	int keysym = input_get_mapping(item->id);
-	const char *keyname = SDL_GetKeyName((SDL_Keycode)keysym);
+	Keycode keysym = input_get_mapping(static_cast<INPUTS>(item->id));
+	const char *keyname = SDL_GetKeyName(keysym);
 	
 	maxcpy(item->righttext, keyname, sizeof(item->righttext) - 1);
 }
@@ -410,9 +411,8 @@ Message *msg;
 
 static void _finish_control_edit(Message *msg)
 {
-int inputno = opt.remapping_key;
-int new_sdl_key = opt.new_sdl_key;
-int i;
+INPUTS inputno = static_cast<INPUTS>(opt.remapping_key);
+Keycode new_sdl_key = static_cast<Keycode>(opt.new_sdl_key);
 
 	if (input_get_mapping(inputno) == new_sdl_key)
 	{
@@ -421,8 +421,9 @@ int i;
 	}
 	
 	// check if key is already in use
-	for(i=0;i<INPUT_COUNT;i++)
+	for(int it=0;it<INPUT_COUNT;it++)
 	{
+        INPUTS i = static_cast<INPUTS>(it);
 		if (i != inputno && input_get_mapping(i) == new_sdl_key)
 		{
 			new Message("Key already in use by:", input_get_name(i));

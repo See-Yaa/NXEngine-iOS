@@ -152,4 +152,6 @@ bool JumpScript(int newscriptno, int pageno=-1);
 
 int CVTDir(int csdir);
 
+char *tsc_decrypt(const char *fname, size_t *fsize_out);
+
 #endif

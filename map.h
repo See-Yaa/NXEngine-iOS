@@ -120,4 +120,9 @@ void map_ChangeTileWithSmoke(int x, int y, int newtile, int nclouds=4, bool boom
 // 	#define MAP_DRAW_EXTRA_Y	0
 // #endif
 
+
+void map_scroll_lock(bool lockstate);
+void map_show_map_name();
+Object *FindObjectByID2(int id2);
+
 #endif

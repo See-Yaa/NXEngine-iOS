@@ -1,7 +1,15 @@
+#include "config.h"
+
+#ifdef CONFIG_USE_VJOY
+
+
 #include <cmath>
 #include <map>
 #include <vector>
 #include <SDL.h>
+
+
+
 
 #include "vjoy.h"
 #include "input.h"
@@ -408,3 +416,5 @@ void VJoy::ProcessInput()
       Pad::update_buttons(p);
    }
 }
+
+#endif // CONFIG_USE_VJOY

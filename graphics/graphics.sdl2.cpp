@@ -1,10 +1,14 @@
+#include "../config.h"
+
+#ifdef CONFIG_USE_SDL2
+
 #include <cassert>
 #include <algorithm>
 // graphics routines
 #include <SDL.h>
 
 #include <stdlib.h>
-#include "../config.h"
+
 #include "graphics.h"
 #include "tileset.h"
 #include "sprites.h"
@@ -517,7 +521,7 @@ void Graphics::SetDrawTarget(NXSurface *surface)
 	drawtarget = surface;
 }
 
-
+#endif // CONFIG_USE_SDL2
 
 
 

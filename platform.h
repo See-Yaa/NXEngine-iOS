@@ -12,10 +12,16 @@
 
 #if defined (__APPLE__)
 #  include "TargetConditionals.h"
-#  if defined(TARGET_OS_IPHONE)
+
+#  if TARGET_OS_IPHONE == 1
 #     define IPHONE
+#  elif TARGET_OS_MAC == 1
+#     define MACOSX
 #  endif
+
 #endif
+
+
 
 extern "C"
 {

@@ -37,7 +37,11 @@ int x, y, i;
 			return sfc;
 	}
 	
+#ifdef CONFIG_USE_SDL2
 	SDL_SetPaletteColors(screen->Format()->palette, screenpal, 0, ncolors);
+#else
+    SDL_SetColors(screen->GetSDLSurface(), screenpal, 0, ncolors);
+#endif
 	return sfc;
 /*
 	// remap indexes in surface

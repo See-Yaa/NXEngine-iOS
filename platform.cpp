@@ -47,8 +47,8 @@ bool is_dir(char const* path)
     struct stat sb;
     if (stat(path, &sb))
     {
-        int saved_errno = errno;
-        char* err = strerror(saved_errno);
+        //int saved_errno = errno;
+        //char* err = strerror(saved_errno);
         return false;
     }
     bool res = S_ISDIR(sb.st_mode);
@@ -61,8 +61,8 @@ bool check_mkdir(const char* path, mode_t mode = 0755)
     {
         if (mkdir(path, mode))
         {
-            int saved_errno = errno;
-            char* err = strerror(saved_errno);
+            //int saved_errno = errno;
+            //char* err = strerror(saved_errno);
             return false;
         }
     }
@@ -84,7 +84,7 @@ bool setup_path(int argc, char** argv)
     
     
     
-#ifdef IPHONE
+#if defined(IPHONE)
     bool sandboxed = false;
     char* r = strstr(argv[0], "/var/mobile/Applications/");
     if (r)
@@ -92,9 +92,9 @@ bool setup_path(int argc, char** argv)
         sandboxed = true;
     }
 
-#if TARGET_IPHONE_SIMULATOR
+# if TARGET_IPHONE_SIMULATOR
     sandboxed = true;
-#endif
+# endif
     
     if (sandboxed)
     {
@@ -123,7 +123,13 @@ bool setup_path(int argc, char** argv)
     
     ro_filesys_path = "./game_resources/";
     
-#elif USE_RO_FILESYS
+#elif defined(MACOSX)
+    
+//    ro_filesys_path = argv[0];
+//    rw_filesys_path = argv[0];
+//    ca_filesys_path = argv[0];
+    
+#elif defined(USE_RO_FILESYS)
     ro_filesys_path = "./ro/";
     rw_filesys_path = "./rw/";
     ca_filesys_path = "./rw/";

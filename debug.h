@@ -8,4 +8,8 @@
 #define DM_YLINE			3
 #define DM_BOX				4
 
+
+const char *DescribeObjectType(int type);
+
+
 #endif

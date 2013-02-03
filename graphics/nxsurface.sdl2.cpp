@@ -1,8 +1,11 @@
+#include "../config.h"
+
+#ifdef CONFIG_USE_SDL2
+
 #include <cassert>
 #include <string.h>
 #include <stdint.h>
 #include "../settings.h"
-#include "../config.h"
 #include "graphics.h"
 #include "nxsurface.h"
 #include "nxsurface.fdh"
@@ -411,3 +414,5 @@ void NXSurface::setPixelFormat(Uint32 format)
 {
 	tex_format.format = format;
 }
+
+#endif // CONFIG_USE_SDL2

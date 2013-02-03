@@ -134,4 +134,7 @@ enum BoosterState
 void AddXP(int xp, bool quiet = false);
 void SubXP(int xp, bool quiet = false);
 
+void PSelectSprite(void);
+void PSelectFrame(void);
+
 #endif
