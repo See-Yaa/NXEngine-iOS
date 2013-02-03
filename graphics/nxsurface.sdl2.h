@@ -18,12 +18,14 @@ extern NXSurface *screen;
 struct NXColor
 {
 	uint8_t r, g, b;
+
+	NXColor() : r(0), g(0), b(0) {}
 	
 	NXColor(uint8_t rr, uint8_t gg, uint8_t bb)
 		: r(rr), g(gg), b(bb)
 	{ }
 	
-	NXColor(uint32_t hexcolor = 0)
+	NXColor(uint32_t hexcolor)
 	{
 		r = hexcolor >> 16;
 		g = hexcolor >> 8;
@@ -60,6 +62,7 @@ class NXSurface
 public:
 	NXSurface();
 	NXSurface(int wd, int ht, NXFormat *format = screen->Format());
+	static NXSurface* createScreen(int wd, int ht, Uint32 pixel_format);
 	//NXSurface(SDL_Surface *from_sfc, bool freesurface=true);
 	// NXSurface(SDL_Renderer *renderer);
 	~NXSurface();
@@ -85,6 +88,8 @@ public:
 	void FillRect(int x1, int y1, int x2, int y2, NXColor color);
 	void FillRect(NXRect *rect, uint8_t r, uint8_t g, uint8_t b);
 	void FillRect(NXRect *rect, NXColor color);
+	void ClearRect(int x1, int y1, int x2, int y2);
+	void ClearRect(NXRect *rect);
 	void Clear(uint8_t r, uint8_t g, uint8_t b);
 	
 	void DrawPixel(int x, int y, uint8_t r, uint8_t g, uint8_t b);
@@ -151,6 +156,11 @@ NXSurface::FillRect(NXRect *rect, uint8_t r, uint8_t g, uint8_t b)
 void inline
 NXSurface::FillRect(NXRect *rect, NXColor color)
 { FillRect(rect->x, rect->y, rect->x + (rect->w - 1), rect->y + (rect->h - 1), color.r, color.g, color.b); }
+
+void inline
+NXSurface::ClearRect(NXRect *rect)
+{ ClearRect(rect->x, rect->y, rect->x + (rect->w - 1), rect->y + (rect->h - 1)); }
+
 
 
 void inline

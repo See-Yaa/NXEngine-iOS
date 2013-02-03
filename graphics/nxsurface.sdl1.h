@@ -18,12 +18,14 @@ extern NXSurface *screen;
 struct NXColor
 {
 	uint8_t r, g, b;
+
+	NXColor() : r(0), g(0), b(0) {}
 	
 	NXColor(uint8_t rr, uint8_t gg, uint8_t bb)
 		: r(rr), g(gg), b(bb)
 	{ }
 	
-	NXColor(uint32_t hexcolor = 0)
+	NXColor(uint32_t hexcolor)
 	{
 		r = hexcolor >> 16;
 		g = hexcolor >> 8;

@@ -32,7 +32,7 @@ int screen_bpp;
 
 const NXColor DK_BLUE(0, 0, 0x21);		// the popular dk blue backdrop color
 const NXColor BLACK(0, 0, 0);			// pure black, only works if no colorkey
-const NXColor CLEAR(0, 0, 0);			// the transparent/colorkey color
+//const NXColor CLEAR(0, 0, 0);			// the transparent/colorkey color
 
 static bool is_fullscreen = false;
 static int current_res = -1;
@@ -247,9 +247,9 @@ bool Graphics::InitVideo()
 	
 	SDL_ShowCursor(is_fullscreen == false);
 
-	
-	screen = new NXSurface(/*renderer*/);
-	screen->setPixelFormat(info.texture_formats[0]);
+	screen = NXSurface::createScreen(Graphics::SCREEN_WIDTH*SCALE, Graphics::SCREEN_HEIGHT*SCALE, 
+		info.texture_formats[0]);
+
 	if (!drawtarget) drawtarget = screen;
 	return 0;
 }
@@ -376,7 +376,7 @@ NXRect srcrect, dstrect;
 	if (tileset && spritesheet)
 	{
 		// blank out the old tile data with clear
-		tileset->FillRect(&dstrect, CLEAR);
+		tileset->ClearRect(&dstrect);
 		
 		// copy the sprite over
 		BlitSurface(spritesheet, &srcrect, tileset, &dstrect);

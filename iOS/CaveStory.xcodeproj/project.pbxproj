@@ -1804,6 +1804,7 @@
 		E9BFD47916BED4840015C28D /* stage.dat */ = {isa = PBXFileReference; lastKnownFileType = file; path = stage.dat; sourceTree = "<group>"; };
 		E9BFD47A16BED4840015C28D /* tilekey.dat */ = {isa = PBXFileReference; lastKnownFileType = file; path = tilekey.dat; sourceTree = "<group>"; };
 		E9BFD47B16BED4840015C28D /* wavetable.dat */ = {isa = PBXFileReference; lastKnownFileType = file; path = wavetable.dat; sourceTree = "<group>"; };
+		E9D26FD016BEF7AD00DF632B /* IGestureObserver.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = IGestureObserver.hpp; sourceTree = "<group>"; };
 		E9E72A3C16BEE38F00658A8C /* SDL.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = SDL.xcodeproj; path = "deps/SDL2/Xcode-iOS/SDL/SDL.xcodeproj"; sourceTree = "<group>"; };
 		E9E72A4A16BEE46500658A8C /* SDL_ttf.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = SDL_ttf.xcodeproj; path = "deps/SDL_ttf/Xcode-iOS/SDL_ttf.xcodeproj"; sourceTree = "<group>"; };
 		E9E72A5316BEE47500658A8C /* freetype2.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = freetype2.xcodeproj; path = deps/libfreetype/freetype2.xcodeproj; sourceTree = "<group>"; };
@@ -2426,6 +2427,7 @@
 		E9BFD23A16BED0AA0015C28D /* platform */ = {
 			isa = PBXGroup;
 			children = (
+				E9D26FD016BEF7AD00DF632B /* IGestureObserver.hpp */,
 				E9E72AD716BEED6300658A8C /* iOS */,
 				E9E72AD116BEED4900658A8C /* platform.h */,
 				E9E72AD216BEED4900658A8C /* platform.cpp */,
