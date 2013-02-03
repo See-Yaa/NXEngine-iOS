@@ -346,6 +346,13 @@ static int frameskip = 0;
 		VJoy::DrawAll();
 #endif
 		
+        // This will issue flush for old events.
+        // New events will be acquired from inside screen flip (there ui message
+        // pump) or on next cycle in input_poll()
+#ifdef CONFIG_USE_VJOY
+        VJoy::PreProcessInput();
+#endif
+        
 		if (!flipacceltime)
 		{
 			//platform_sync_to_vblank();

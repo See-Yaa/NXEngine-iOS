@@ -14,7 +14,7 @@
 #include "sprites.h"
 #include "../dirnames.h"
 #include "graphics.fdh"
-#include "../platform.h"
+#include "../platform/platform.h"
 
 SDL_Window * window = NULL;
 SDL_Renderer * renderer = NULL;

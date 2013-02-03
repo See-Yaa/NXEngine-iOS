@@ -13,7 +13,7 @@
 #include "sound/sound.h"
 #include "endgame/credits.h"
 #include "debug.h"
-
+#include "vjoy.h"
 
 static int MnemonicToIndex(const char *str);
 static char nextchar(const char **buf, const char *buf_end);
@@ -72,7 +72,6 @@ struct TSCCommandTable
 unsigned char codealphabet[] = { "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123+-" };
 unsigned char letter_to_code[256];
 unsigned char mnemonic_lookup[32*32*32];
-
 
 
 static void GenLTC(void)
@@ -574,8 +573,12 @@ int cmdip;
 			// if key was just pressed release nod.
 			// check them separately to allow holding X while
 			// tapping Z to keep text scrolling fast.
-			if ((inputs[JUMPKEY] && !s->lastjump) || \
-				(inputs[FIREKEY] && !s->lastfire))
+			if ((inputs[JUMPKEY] && !s->lastjump)
+				|| (inputs[FIREKEY] && !s->lastfire)
+#ifdef CONFIG_USE_VJOY
+                || VJoy::ModeAware::wasTap()
+#endif
+                )
 			{
 				// hide the fact that the key was just pushed
 				// so player doesn't jump/fire stupidly when dismissing textboxes

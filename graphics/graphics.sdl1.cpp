@@ -15,7 +15,7 @@
 #include "sprites.h"
 #include "../dirnames.h"
 #include "graphics.fdh"
-#include "../platform.h"
+#include "../platform/platform.h"
 
 
 // (unscaled) screen size/video mode

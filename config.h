@@ -24,7 +24,13 @@
 #ifdef CONFIG_USE_SDL2
 // show virtual joystick
 # define CONFIG_USE_VJOY
+
+// use taps for control
+# define CONFIG_USE_TAPS
+
 #endif 
+
+
 
 
 

@@ -10,6 +10,7 @@ Game has been tested on jailbroken iPhone 4S (iOS 5.1.1) and non-jailbroken iPad
 - Graphics resolution will be automatically selected in runtime. In theory, it must correctly run on all iPad's and iPhones version >= 4.
 - Original engine has been changed to support separate file locations for game resources (read-only), save files (read-write, persistent) and cache files (read-write, temporary).
 - Primitive virtual joypad has been implemented.
+- Touch control of in-game buttons, dialogs, e.t.c. 
 
 # Requiremetns:
 1. SDL2
@@ -57,9 +58,11 @@ NXEngine-iOS/iOS/deb/CaveStory.deb
 ```
 
 
-# Links:
+# Links and acknowledgment:
 
 Original NXEngine project: http://nxengine.sourceforge.net/
 
 Liberation Mono font: https://fedorahosted.org/liberation-fonts/
+
+Application icons were prepared by Sergey Osminogov (https://plus.google.com/u/0/109504104068874319771). Source image for icons was made by NYAssassin (http://nyassassin.deviantart.com/).
 
