@@ -17,5 +17,6 @@ void debug(const char *fmt, ...);
 
 const char *DescribeObjectType(int type);
 
+const char *strhex(void const* value, size_t size);
 
 #endif
