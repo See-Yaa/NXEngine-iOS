@@ -156,6 +156,8 @@
 		E956465216BEA83A0046ED83 /* nxsurface.sdl2.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E956464D16BEA8390046ED83 /* nxsurface.sdl2.cpp */; };
 		E956465316BEA83A0046ED83 /* graphics.sdl2.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E956464F16BEA83A0046ED83 /* graphics.sdl2.cpp */; };
 		E956465416BEA83A0046ED83 /* font.sdl2.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E956465116BEA83A0046ED83 /* font.sdl2.cpp */; };
+		E95BCD5D16BEF3C30011830A /* nx_math.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E95BCD5C16BEF3C30011830A /* nx_math.cpp */; };
+		E95BCD5E16BEF3C30011830A /* nx_math.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E95BCD5C16BEF3C30011830A /* nx_math.cpp */; };
 		E9BFD13C16BEBF1E0015C28D /* caret.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 0560094F15EEC12D00A7CCD5 /* caret.cpp */; };
 		E9BFD13D16BEBF1E0015C28D /* console.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 0560097215EEC12D00A7CCD5 /* console.cpp */; };
 		E9BFD13E16BEBF1E0015C28D /* debug.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 0560097515EEC12D00A7CCD5 /* debug.cpp */; };
@@ -1241,6 +1243,8 @@
 		E956465B16BEAA920046ED83 /* nxsurface.sdl1.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = nxsurface.sdl1.cpp; sourceTree = "<group>"; };
 		E956465C16BEAA920046ED83 /* graphics.sdl1.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = graphics.sdl1.cpp; sourceTree = "<group>"; };
 		E956465D16BEAA920046ED83 /* font.sdl1.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = font.sdl1.cpp; sourceTree = "<group>"; };
+		E95BCD5B16BEF3C30011830A /* nx_math.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = nx_math.h; path = ../../nx_math.h; sourceTree = "<group>"; };
+		E95BCD5C16BEF3C30011830A /* nx_math.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = nx_math.cpp; path = ../../nx_math.cpp; sourceTree = "<group>"; };
 		E9BFD10216BEBE190015C28D /* CaveStory_osx */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = CaveStory_osx; sourceTree = BUILT_PRODUCTS_DIR; };
 		E9BFD23916BEC5920015C28D /* playerstats.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = playerstats.h; path = ../../playerstats.h; sourceTree = "<group>"; };
 		E9BFD23F16BED0AC0015C28D /* info.nib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = info.nib; sourceTree = "<group>"; };
@@ -1824,7 +1828,6 @@
 		E9E72ADC16BEED6300658A8C /* touch_control.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = touch_control.cpp; sourceTree = "<group>"; };
 		E9E72ADD16BEED6300658A8C /* touch_control.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = touch_control.h; sourceTree = "<group>"; };
 		E9E72ADE16BEED6300658A8C /* touch_control_private.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = touch_control_private.h; sourceTree = "<group>"; };
-		E9E72AE216BEEDA500658A8C /* RectI.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RectI.h; path = ../../RectI.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -1860,7 +1863,8 @@
 		0560064C15EEC07A00A7CCD5 /* src */ = {
 			isa = PBXGroup;
 			children = (
-				E9E72AE216BEEDA500658A8C /* RectI.h */,
+				E95BCD5B16BEF3C30011830A /* nx_math.h */,
+				E95BCD5C16BEF3C30011830A /* nx_math.cpp */,
 				E9E72AD016BEED3400658A8C /* game_modes.h */,
 				E9BFD23916BEC5920015C28D /* playerstats.h */,
 				E9BFD23A16BED0AA0015C28D /* platform */,
@@ -3975,6 +3979,7 @@
 				E9E72ADF16BEED6300658A8C /* SDL_uikitview+touch.m in Sources */,
 				E9E72AE016BEED6300658A8C /* SDL_uikitviewcontroller+SDL_uikitviewcontroller_touch.m in Sources */,
 				E9E72AE116BEED6300658A8C /* touch_control.cpp in Sources */,
+				E95BCD5D16BEF3C30011830A /* nx_math.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -4128,6 +4133,7 @@
 				E9BFD23016BEBF1E0015C28D /* TextBox.cpp in Sources */,
 				E9BFD23116BEBF1F0015C28D /* YesNoPrompt.cpp in Sources */,
 				E9E72AD416BEED4900658A8C /* platform.cpp in Sources */,
+				E95BCD5E16BEF3C30011830A /* nx_math.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

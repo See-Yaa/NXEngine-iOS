@@ -1,12 +1,14 @@
 #ifndef VJOY_H__
 #define VJOY_H__
 
+
 #include "config.h"
 
 
 #ifdef CONFIG_USE_VJOY
 
-#include "RectI.h"
+#include "nx_math.h"
+#include "input.h"
 
 union SDL_Event;
 
@@ -19,6 +21,19 @@ void DrawAll();
 void InjectInputEvent(SDL_Event const & event);
 void PreProcessInput();
 void ProcessInput();
+    
+    
+    struct Preset
+    {
+        RectF positions[INPUT_COUNT];
+        PointF pad_center;
+        float pad_size;
+    };
+    
+Preset const& getPreset(size_t num);
+size_t getPresetsCount();
+void setFromPreset(size_t num);
+void setUpdated();
 
 namespace ModeAware
 {
@@ -28,7 +43,9 @@ namespace ModeAware
         ESaveLoad,
         EYesNo,
         EStageSelect1,
-        EStageSelect2
+        EStageSelect2,
+        EOptsVkeyMenu,
+        EOptsVkeyEdit
     };
     
     
@@ -39,6 +56,31 @@ namespace ModeAware
     void specScreenChanged(SpecScreens newScreen, bool enter);
 }
     
+    
+    struct IEditEventHandler
+    {
+        virtual void end() = 0;
+        virtual void selected(int key) = 0;
+        virtual void selectedPad(bool enter) = 0;
+    protected:
+        ~IEditEventHandler() {}
+    };
+    
+    void setEditEventHandler(IEditEventHandler* handler);
+    
+    
+    enum ShowMode
+    {
+        EShowAlways,
+        EShowPressed,
+        EShowUnpressed,
+        EShowNever,
+        
+        EShowModeLast
+    };
+    
+    void setShowMode(ShowMode newmode);
+    ShowMode getShowMode();
 } // namespace VJoy
 
 #endif // CONFIG_USE_VJOY

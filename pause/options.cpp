@@ -26,6 +26,9 @@ static struct
 	int remapping_key, new_sdl_key;
 } opt;
 
+#ifdef CONFIG_USE_VJOY
+static void _vkey_edit_draw();
+#endif
 
 bool options_init(int retmode)
 {
@@ -93,7 +96,11 @@ FocusHolder *fh;
 		
 		fh->Draw();
 	}
-	
+    
+#ifdef CONFIG_USE_VJOY
+    _vkey_edit_draw();
+#endif
+    
 	if (opt.xoffset > 0)
 	{
 		opt.dlg->offset(SLIDE_SPEED, 0);
@@ -125,7 +132,7 @@ void c------------------------------() {}
 */
 
 static void EnterTapControlsMenu(ODItem *item, int dir);
-
+static void EnterVjoyControlsMenu(ODItem *item, int dir);
 
 static void EnterMainMenu()
 {
@@ -140,6 +147,10 @@ Dialog *dlg = opt.dlg;
     
 #ifdef CONFIG_USE_TAPS
     dlg->AddItem("Tap controls", EnterTapControlsMenu);
+#endif
+    
+#ifdef CONFIG_USE_VJOY
+    dlg->AddItem("Virtual keys", EnterVjoyControlsMenu);
 #endif
     
 	dlg->AddItem("Replay", EnterReplayMenu);
@@ -504,12 +515,225 @@ static void _edit_tap_control(ODItem *item, int dir)
     }
 }
 
+/*
+ void c------------------------------() {}
+ */
+
+#ifdef CONFIG_USE_VJOY
+
+static void _edit_view_preset(ODItem *item, int dir);
+static void _get_view_preset(ODItem *item);
+static void _edit_show_mode(ODItem *item, int dir);
+static void _get_show_mode(ODItem *item);
+static void _apply_preset(ODItem *item, int dir);
+static void _enter_edit_buttons(ODItem *item, int dir);
+
+void (*beforeVjoyControlsDisiss)() = NULL;
+struct {
+    VJoy::Preset preset;
+    int num;
+    bool need_restore;
+} preset_restore;
+
+static void _vjoy_controls_menu_dissmiss()
+{
+    if (preset_restore.need_restore)
+    {
+        settings->vjoy_controls = preset_restore.preset;
+        settings->vjoy_current_preset = preset_restore.num;
+        VJoy::setUpdated();
+    }
+    
+    VJoy::ModeAware::specScreenChanged(VJoy::ModeAware::EOptsVkeyMenu, false);
+    
+    Dialog *dlg = opt.dlg;
+    dlg->ondismiss = beforeVjoyControlsDisiss;
+    EnterMainMenu();
+}
+
+static void _setup_vjoy_controls_menu()
+{
+    Dialog *dlg = opt.dlg;
+    
+    dlg->Clear();
+	sound(SND_MENU_MOVE);
+	
+	dlg->AddItem("View preset", _edit_view_preset, _get_view_preset);
+    
+    
+	dlg->AddSeparator();
+    
+    dlg->AddItem("Edit buttons", _enter_edit_buttons);
+    
+	dlg->AddSeparator();
+    
+    dlg->AddItem("Keys show mode", _edit_show_mode, _get_show_mode);
+    
+    dlg->AddSeparator();
+    
+    dlg->AddItem("Apply", _apply_preset);
+	dlg->AddDismissalItem("Cancel");
+}
+
+static void EnterVjoyControlsMenu(ODItem *item, int dir)
+{
+    Dialog *dlg = opt.dlg;
+    
+    _setup_vjoy_controls_menu();
+    
+    beforeVjoyControlsDisiss = dlg->ondismiss;
+    dlg->ondismiss = _vjoy_controls_menu_dissmiss;
+    
+    preset_restore.preset = settings->vjoy_controls;
+    preset_restore.num = settings->vjoy_current_preset;
+    preset_restore.need_restore = true;
+    
+    VJoy::ModeAware::specScreenChanged(VJoy::ModeAware::EOptsVkeyMenu, true);
+}
+
+static void _edit_view_preset(ODItem *item, int dir)
+{
+    int newpres = (settings->vjoy_current_preset + dir);
+	if (newpres >= VJoy::getPresetsCount()) newpres = 0;
+	if (newpres < 0) newpres = (VJoy::getPresetsCount() - 1);
+    
+    settings->vjoy_controls = VJoy::getPreset(newpres);
+    settings->vjoy_current_preset = newpres;
+    VJoy::setUpdated();
+    
+    preset_restore.need_restore = true;
+    
+    sound(SND_DOOR);
+}
+
+static void _get_view_preset(ODItem *item)
+{
+    snprintf(item->righttext, sizeof(item->righttext), "%d", settings->vjoy_current_preset);
+}
+
+static void _edit_show_mode(ODItem *item, int dir)
+{
+    int newmode = (settings->vjoy_show_mode + dir);
+	if (newmode >= VJoy::EShowModeLast) newmode = 0;
+	if (newmode < 0) newmode = (VJoy::EShowModeLast - 1);
+    
+    settings->vjoy_show_mode = newmode;
+    
+    sound(SND_DOOR);
+}
+
+static void _get_show_mode(ODItem *item)
+{
+    static char const * const modes[VJoy::EShowModeLast] = {
+        "Always", "Pressed only", "Unpressed only", "Never"
+    };
+    maxcpy(item->righttext, modes[settings->vjoy_show_mode], sizeof(item->righttext));
+}
 
 
+static void _apply_preset(ODItem *item, int dir)
+{
+    preset_restore.preset = settings->vjoy_controls;
+    preset_restore.num = settings->vjoy_current_preset;
+    preset_restore.need_restore = false;
+    
+    _vjoy_controls_menu_dissmiss();
+    
+    sound(SND_MENU_SELECT);
+}
+
+struct VkeyEdit
+{
+    VkeyEdit() :
+        enabled(false),
+        selected(-1)
+    {}
+    
+    bool enabled;
+    int selected;
+} vkeyEdit;
+
+struct EditEventHandler : public VJoy::IEditEventHandler
+{
+    virtual void end()
+    {
+        VJoy::ModeAware::specScreenChanged(VJoy::ModeAware::EOptsVkeyEdit, false);
+        VJoy::setEditEventHandler(NULL);
+        vkeyEdit.enabled = false;
+        _setup_vjoy_controls_menu();
+    }
+    
+    virtual void selected(int k)
+    {
+        //stat("selected k = %d", k);
+        vkeyEdit.selected = k;
+    }
+    
+    virtual void selectedPad(bool enter)
+    {
+        //stat("selected pad");
+        vkeyEdit.selected = enter ? INPUT_COUNT : -1;
+    }
+} editEventhandler;
 
 
+static void _enter_edit_buttons(ODItem *item, int dir)
+{
+    opt.dlg->Clear();
+    VJoy::ModeAware::specScreenChanged(VJoy::ModeAware::EOptsVkeyEdit, true);
+    VJoy::setEditEventHandler(&editEventhandler);
+    vkeyEdit.enabled = true;
+}
 
+static void _vkey_edit_draw()
+{
+    static char const * const key_names[INPUT_COUNT + 1] =
+    {
+        "Left", "Right", "Up", "Down",
+        "Jump", "Fire",
+        "Wpn Prev", "Wpn Next",
+        "Inventory", "Map",
+        
+        "Esc",
+        "F1",
+        "F2",
+        "F3",
+        "F4",
+        "F5",
+        "F6",
+        "F7",
+        "F8",
+        "F9",
+        "F10",
+        "F11",
+        "F12",
+        
+        "Freeze frame",
+        "Frame advance",
+        "Debug fly",
+        
+        "Pad"
+    };
+    
+    if (!vkeyEdit.enabled)
+        return;
+    
+    if (vkeyEdit.selected < 0)
+    {
+        int x = 10;
+        int y = 10;
+        font_draw(x, y, "Pinch to exit");
+        font_draw(x, y += GetFontHeight(), "Tap to select button");
+    }
+    else
+    {
+        int x = 10;
+        int y = 10;
+        font_draw(x, y, key_names[vkeyEdit.selected], 0, &greenfont);
+        font_draw(x, y += GetFontHeight(), "Tap to unselect button/select next");
+        font_draw(x, y += GetFontHeight(), "Pan to move button");
+        font_draw(x, y += GetFontHeight(), "Pinch/spread to resize button");
+    }
+}
 
-
-
-
+#endif // CONFIG_USE_VJOY

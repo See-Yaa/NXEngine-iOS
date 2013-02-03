@@ -5,6 +5,7 @@
 
 #include <cassert>
 #include <cmath>
+#include <list>
 #include <map>
 #include <set>
 #include <stack>
@@ -18,6 +19,7 @@
 #include "input.h"
 #include "graphics/graphics.h"
 #include "game_modes.h"
+#include "nx_math.h"
 #include "settings.h"
 
 #include "platform/platform.h"
@@ -33,135 +35,26 @@ namespace VJoy
 
 // Helpers
 namespace  {
-    struct Point
-    {
-        float x, y;
-        Point(float x, float y) : x(x), y(y) {}
-        Point() : x(0), y(0) {}
-        
-        Point operator+(Point const& r) const
-        {
-            return Point(x + r.x, y + r.y);
-        }
-        
-        Point operator-(Point const& r) const
-        {
-            return Point(x - r.x, y - r.y);
-        }
-        
-        Point operator*(float k) const
-        {
-            return Point(k * x, k * y);
-        }
-    };
     
-    struct Rect
+    bool point_in(RectI const& rect, PointF const& p)
     {
-        float x, y;
-        float w, h;
-        
-        static Rect centred(Point const& p, float w, float h)
-        {
-            Rect r = {p.x - w/2, p.y - h/2, w, h};
-            return r;
-        }
-        
-        static Rect fromRectI(RectI const& rect)
-        {
-            Rect r = {(float)rect.x / Graphics::SCREEN_WIDTH,
-                (float)rect.y / Graphics::SCREEN_HEIGHT,
-                (float)rect.w / Graphics::SCREEN_WIDTH,
-                (float)rect.h / Graphics::SCREEN_HEIGHT,
-            };
-            return r;
-        }
-        
-        bool point_in(Point const& p) const
-        {
-            return point_in(p.x, p.y);
-        }
-        
-        bool point_in(float px, float py) const
-        {
-            return !(px < x || x + w < px || py < y || y + h < py);
-        }
-        
-        void to_screen_coord(int& x1, int& y1, int& x2, int& y2) const
-        {
-            x1 = Graphics::SCREEN_WIDTH  *  x;
-            y1 = Graphics::SCREEN_HEIGHT *  y;
-            x2 = Graphics::SCREEN_WIDTH  * (x + w);
-            y2 = Graphics::SCREEN_HEIGHT * (y + h);
-        }
-        
-        void draw_fill_rect(NXColor const& c) const
-        {
-            int x1, y1, x2, y2;
-            to_screen_coord(x1, y1, x2, y2);
-            Graphics::FillRect(x1, y1, x2, y2, c);
-        }
-        
-        void draw_thick_rect(NXColor const& c) const
-        {
-            int x1, y1, x2, y2;
-            to_screen_coord(x1, y1, x2, y2);
-            Graphics::DrawRect(x1, y1, x2, y2, c);
-        }
-        
-        void draw_thin_rect(NXColor const& c) const
-        {
-            int x1, y1, x2, y2;
-            to_screen_coord(x1, y1, x2, y2);
-            Graphics::DrawLine(x1, y1, x2, y1, c);
-            Graphics::DrawLine(x1, y2, x2, y2, c);
-            Graphics::DrawLine(x1, y1, x1, y2, c);
-            Graphics::DrawLine(x2, y1, x2, y2, c);
-        }
-    };
-    
-    struct Tri
-    {
-        Point a;
-        Point b, c;
-        
-        Tri(Point const& a, float size, float rb, float rc) :
-        a(a)
-        {
-#define P(a) (double(a) * M_PI / 8.0)
-            b = Point(cos(P(rb)), sin(P(rb))) * size + a;
-            c = Point(cos(P(rc)), sin(P(rc))) * size + a;
-#undef P
-        }
-        
-        static float sign(Point const& p1, Point const& p2, Point const& p3)
-        {
-            return (p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y);
-        }
-        
-        bool in(Point const& pt) const
-        {
-            bool b1, b2, b3;
-            
-            b1 = sign(pt, a, b) < 0.0f;
-            b2 = sign(pt, b, c) < 0.0f;
-            b3 = sign(pt, c, a) < 0.0f;
-            
-            return ((b1 == b2) && (b2 == b3));
-        }
-    };
-    
-    bool point_in(RectI const& rect, Point const& p)
-    {
-        Rect r = Rect::fromRectI(rect);
+        RectF r = RectF::fromRectI(rect);
         return r.point_in(p);
     }
+    
 }
 
 
-const NXColor col_released(0xff, 0xcf, 0x33);
-const NXColor col_pressed (0xff, 0x00, 0x00);
+const NXColor std_col_released(0xff, 0xcf, 0x33);
+const NXColor std_col_pressed (0xff, 0x00, 0x00);
 
-typedef std::map<SDL_FingerID, Point> lastFingerPos_t;
+const NXColor edit_col_released(0xb8, 0xb8, 0xb8);
+const NXColor edit_col_pressed (0x12, 0xe3, 0x24);
+
+NXColor col_released = std_col_released;
+NXColor col_pressed  = std_col_pressed;
+
+typedef std::map<SDL_FingerID, PointF> lastFingerPos_t;
 lastFingerPos_t lastFingerPos;
 
 typedef std::set<SDL_FingerID> ingnoredFinger_t;
@@ -217,6 +110,11 @@ public:
         return EBOTH;
     }
     
+    void specialGestures(bool enabled)
+    {
+        toggleSpecGestureRecognizer(enabled);
+    }
+    
 private:
     Mode mode;
 };
@@ -231,42 +129,217 @@ float xres = -1.0f;
 float yres = -1.0f;
 
 
+class GestureObserver : public IGestureObserver
+{
+    typedef std::vector<PointF> tapLocation_t;
+    typedef std::list<std::pair<PointF, PointF> > panTranslation_t;
+public:
+    virtual void tap(float x, float y)
+    {
+        taps.push_back(PointF(x, y));
+    }
+    
+    virtual void pan(float x, float y, float dx, float dy)
+    {
+        pans.push_back(std::make_pair(PointF(x, y), PointF(dx, dy)));
+    }
+    
+    virtual void pinch(float scale, bool is_end)
+    {
+        pinch_scale = scale;
+        was_pinch = true;
+        pinch_ended = is_end;
+    }
+    
+public:
+    
+    bool wasTap(RectF const& rect)
+    {
+        for (tapLocation_t::const_iterator it = taps.begin(); it != taps.end(); ++it)
+        {
+            if (rect.point_in(*it))
+                return true;
+        }
+        
+        return false;
+    }
+    
+    bool wasTap()
+    {
+        return !taps.empty();
+    }
+    
+    bool wasPan(PointF& p, PointF& t)
+    {
+        if (pans.empty())
+            return false;
+        p = pans.front().first;
+        t = pans.front().second;
+        pans.pop_front();
+        return true;
+    }
+    
+    bool wasPinch(float& scale) const
+    {
+        if (!was_pinch)
+            return false;
+        scale = pinch_scale;
+        return true;
+    }
+    
+    bool pinchEnded() const
+    {
+        return pinch_ended;
+    }
+    
+    void flushEvents()
+    {
+        taps.clear();
+        pans.clear();
+        was_pinch = false;
+        pinch_ended = false;
+    }
+    
+private:
+    
+    tapLocation_t taps;
+    panTranslation_t pans;
+    float pinch_scale;
+    bool was_pinch;
+    bool pinch_ended;
+};
+
+static GestureObserver gestureObserver;
+
+
+
 // VKeys
 namespace VKeys {
+    namespace Edit
+    {
+        bool edit_enabled = false;
+        bool pad_selected;
+    }
+    
+    static const size_t presets_count = 2;
+    
+    static const VJoy::Preset presets[presets_count] =
+    {
+        // 0 - default
+        {
+            { // positions
+                {/*0.7f*/-1.f, 0.8f, 0.1f, 0.1f}, // LEFTKEY
+                {/*0.9f*/-1.f, 0.8f, 0.1f, 0.1f}, // RIGHTKEY
+                {/*0.8f*/-1.f, 0.7f, 0.1f, 0.1f}, // UPKEY
+                {/*0.8f*/-1.f, 0.9f, 0.1f, 0.1f}, // DOWNKEY
+                
+                {0.00f, 0.8f, 0.14f, 0.2f}, // JUMPKEY
+                {0.15f, 0.8f, 0.14f, 0.2f}, // FIREKEY
+                
+                {0.00f, 0.55f, 0.1f, 0.1f}, // PREVWPNKEY
+                {0.15f, 0.55f, 0.1f, 0.1f}, // NEXTWPNKEY
+                
+                {0.00f, 0.0f, 0.1f, 0.1f}, // INVENTORYKEY
+                {0.15f, 0.0f, 0.1f, 0.1f}, // MAPSYSTEMKEY
+                
+                {0.40f, 0.0f, 0.1f, 0.1f}, // ESCKEY
+                {0.55f, 0.0f, 0.1f, 0.1f}, // F1KEY
+                {0.70f, 0.0f, 0.1f, 0.1f}, // F2KEY
+                {0.85f, 0.0f, 0.1f, 0.1f}, // F3KEY
+                {-1.f, -1.f, -1.f, -1.f}, // F4KEY
+                {-1.f, -1.f, -1.f, -1.f}, // F5KEY
+                {-1.f, -1.f, -1.f, -1.f}, // F6KEY
+                {-1.f, -1.f, -1.f, -1.f}, // F7KEY
+                {-1.f, -1.f, -1.f, -1.f}, // F8KEY
+                {-1.f, -1.f, -1.f, -1.f}, // F9KEY
+                {-1.f, -1.f, -1.f, -1.f}, // F10KEY
+                {-1.f, -1.f, -1.f, -1.f}, // F11KEY
+                {-1.f, -1.f, -1.f, -1.f}, // F12KEY
+                
+                {-1.f, -1.f, -1.f, -1.f}, // FREEZE_FRAME_KEY
+                {-1.f, -1.f, -1.f, -1.f}, // FRAME_ADVANCE_KEY
+                {-1.f, -1.f, -1.f, -1.f}  // DEBUG_FLY_KEY
+            },
+            PointF(0.82f, 0.82f),
+            0.13f
+        },
+        // 1 - swap left-rigth
+        {
+            { // positions
+                {/*0.7f*/-1.f, 0.8f, 0.1f, 0.1f}, // LEFTKEY
+                {/*0.9f*/-1.f, 0.8f, 0.1f, 0.1f}, // RIGHTKEY
+                {/*0.8f*/-1.f, 0.7f, 0.1f, 0.1f}, // UPKEY
+                {/*0.8f*/-1.f, 0.9f, 0.1f, 0.1f}, // DOWNKEY
+                
+                {0.85f, 0.8f, 0.14f, 0.2f}, // JUMPKEY
+                {0.70f, 0.8f, 0.14f, 0.2f}, // FIREKEY
+                
+                {0.74f, 0.55f, 0.1f, 0.1f}, // PREVWPNKEY
+                {0.89f, 0.55f, 0.1f, 0.1f}, // NEXTWPNKEY
+                
+                {0.00f, 0.0f, 0.1f, 0.1f}, // INVENTORYKEY
+                {0.15f, 0.0f, 0.1f, 0.1f}, // MAPSYSTEMKEY
+                
+                {0.40f, 0.0f, 0.1f, 0.1f}, // ESCKEY
+                {0.55f, 0.0f, 0.1f, 0.1f}, // F1KEY
+                {0.70f, 0.0f, 0.1f, 0.1f}, // F2KEY
+                {0.85f, 0.0f, 0.1f, 0.1f}, // F3KEY
+                {-1.f, -1.f, -1.f, -1.f}, // F4KEY
+                {-1.f, -1.f, -1.f, -1.f}, // F5KEY
+                {-1.f, -1.f, -1.f, -1.f}, // F6KEY
+                {-1.f, -1.f, -1.f, -1.f}, // F7KEY
+                {-1.f, -1.f, -1.f, -1.f}, // F8KEY
+                {-1.f, -1.f, -1.f, -1.f}, // F9KEY
+                {-1.f, -1.f, -1.f, -1.f}, // F10KEY
+                {-1.f, -1.f, -1.f, -1.f}, // F11KEY
+                {-1.f, -1.f, -1.f, -1.f}, // F12KEY
+                
+                {-1.f, -1.f, -1.f, -1.f}, // FREEZE_FRAME_KEY
+                {-1.f, -1.f, -1.f, -1.f}, // FRAME_ADVANCE_KEY
+                {-1.f, -1.f, -1.f, -1.f}  // DEBUG_FLY_KEY
+            },
+            PointF(0.19f, 0.82f),
+            0.13f
+        }
+    };
     
 namespace Pad
 {
     bool enabled = false;
     SDL_FingerID finger;
-    Point origin;
-    Point current;
+    PointF origin;
+    PointF current;
     
     const float border = 0.65f;
     const float max_r2 = 0.2*0.2;
     const float min_r2 = 0.02*0.02;
     
-    const float seg_size = 0.13f;
-    const Point seg_center(0.82f, 0.82f);
-    
     const size_t seg_count = 8;
-    Tri segments[seg_count] = {
-        Tri(seg_center, seg_size, -1, 1),
-        Tri(seg_center, seg_size, 1, 3),
-        Tri(seg_center, seg_size, 3, 5),
-        Tri(seg_center, seg_size, 5, 7),
-        Tri(seg_center, seg_size, 7, -7),
-        Tri(seg_center, seg_size, -7, -5),
-        Tri(seg_center, seg_size, -5, -3),
-        Tri(seg_center, seg_size, -3, -1)
-    };
-    
+    TriF segments[seg_count];
     bool pressed[seg_count];
     
-    void update_buttons(Point const& p)
+    void init()
     {
-        Point vec = p - seg_center;
+        for (int i = 0, p = 7; i < seg_count; ++i, p += 2)
+        {
+#define F(p) ((p) % 16) - 8
+            int rb = F(p);
+            int rc = F(p + 2);
+#undef F
+            
+            segments[i] = TriF(settings->vjoy_controls.pad_center, settings->vjoy_controls.pad_size, rb, rc);
+        }
+        
+        //seg_size = preset.pad_size;
+        //seg_center = preset.pad_center;
+    }
+    
+    void update_buttons(PointF const& p)
+    {
+        
+        PointF vec = p - settings->vjoy_controls.pad_center;
         float r2 = vec.x * vec.x + vec.y * vec.y;
-        if (r2 > seg_size*seg_size)
+        if (r2 > settings->vjoy_controls.pad_size * settings->vjoy_controls.pad_size)
             return;
         
         // left
@@ -284,42 +357,53 @@ namespace Pad
         }
     }
     
-    void process()
-    {
-        if (!enabled)
-            return;
-        
-        Point vec = current - origin;
-        float r2 = vec.x * vec.x + vec.y * vec.y;
-        if (r2 < min_r2)
-            return;
-        // if (r2 > max_r2)
-        //    r2 = max_r2;
-        
-        float t = atan2(vec.y, vec.x);
-        
-#define P(a) (float(double(a) * M_PI / 8.0))
-#define RANGE(a, b) (P(a) <= t && t <= P(b))
-        
-        inputs[0] = (RANGE(-8, -5) || RANGE(5, 8));  // left
-        inputs[1] = (RANGE(-3, 0) || RANGE(0, 3));   // rigth
-        inputs[2] = (RANGE(-7, -1));                 // up
-        inputs[3] = (RANGE(1, 7));                   // down
-        
-#undef RANGE
-#undef P
-        
-    }
+//    void process()
+//    {
+//        if (!enabled)
+//            return;
+//        
+//        PointF vec = current - origin;
+//        float r2 = vec.x * vec.x + vec.y * vec.y;
+//        if (r2 < min_r2)
+//            return;
+//        // if (r2 > max_r2)
+//        //    r2 = max_r2;
+//        
+//        float t = atan2(vec.y, vec.x);
+//        
+//        
+//        
+//#define P(a) (float(double(a) * M_PI / 8.0))
+//#define RANGE(a, b) (P(a) <= t && t <= P(b))
+//        
+//       // pressed[0] = RANGE(-8, -7)
+//        
+//        inputs[0] = (RANGE(-8, -5) || RANGE(5, 8));  // left
+//        inputs[1] = (RANGE(-3, 0) || RANGE(0, 3));   // rigth
+//        inputs[2] = (RANGE(-7, -1));                 // up
+//        inputs[3] = (RANGE(1, 7));                   // down
+//        
+//#undef RANGE
+//#undef P
+//        
+//    }
     
     void draw()
     {
-        Point const& a = seg_center;
+        PointF const& a = settings->vjoy_controls.pad_center;
         for (size_t i = 0; i < seg_count; ++i)
         {
-            Point const& b = segments[i].b;
-            Point const& c = segments[i].c;
+            if (!Edit::edit_enabled &&
+                ((pressed[i] && settings->vjoy_show_mode == VJoy::EShowUnpressed) ||
+                (!pressed[i] && settings->vjoy_show_mode == VJoy::EShowPressed))
+                )
+                continue;
             
-            NXColor const& color = pressed[i] ? col_pressed : col_released;
+            PointF const& b = segments[i].b;
+            PointF const& c = segments[i].c;
+            
+            NXColor color = pressed[i] ? col_pressed : col_released;
+            color = (Edit::edit_enabled && Edit::pad_selected) ? col_pressed : color;
             
             Graphics::DrawLine(a.x * Graphics::SCREEN_WIDTH, a.y * Graphics::SCREEN_HEIGHT,
                                b.x * Graphics::SCREEN_WIDTH, b.y * Graphics::SCREEN_HEIGHT, color);
@@ -328,51 +412,231 @@ namespace Pad
         }
     }
 } // namespace Pad
-
     
-    Rect vkeys[INPUT_COUNT] =
+    namespace Edit
     {
-        {/*0.7f*/-1.f, 0.8f, 0.1f, 0.1f}, // LEFTKEY
-        {/*0.9f*/-1.f, 0.8f, 0.1f, 0.1f}, // RIGHTKEY
-        {/*0.8f*/-1.f, 0.7f, 0.1f, 0.1f}, // UPKEY
-        {/*0.8f*/-1.f, 0.9f, 0.1f, 0.1f}, // DOWNKEY
         
-        {0.00f, 0.8f, 0.14f, 0.2f}, // JUMPKEY
-        {0.15f, 0.8f, 0.14f, 0.2f}, // FIREKEY
+        enum State
+        {
+            EBegin,
+            ESelected,
+            ESelectedPad,
+            EPinched,
+            EPinchedPad
+        } state;
+        int selected;
+        RectF beforePinch;
+        float padBeforePinch;
         
-        {0.00f, 0.55f, 0.1f, 0.1f}, // PREVWPNKEY
-        {0.15f, 0.55f, 0.1f, 0.1f}, // NEXTWPNKEY
+        VJoy::IEditEventHandler* editEventHandler;
+
+        bool wasTapOnKey(int key)
+        {
+            return gestureObserver.wasTap(settings->vjoy_controls.positions[key]);
+        }
         
-        {0.00f, 0.0f, 0.1f, 0.1f}, // INVENTORYKEY
-        {0.15f, 0.0f, 0.1f, 0.1f}, // MAPSYSTEMKEY
+        int findTappedKey(int begin)
+        {
+            for (int i = begin; i < INPUT_COUNT; ++i)
+            {
+                if (settings->vjoy_controls.positions[i].x < 0)
+                    continue;
+                
+                if (wasTapOnKey(i))
+                {
+                    return i;
+                }
+            }
+            
+            return -1;
+        }
         
-        {0.40f, 0.0f, 0.1f, 0.1f}, // ESCKEY
-        {0.55f, 0.0f, 0.1f, 0.1f}, // F1KEY
-        {0.70f, 0.0f, 0.1f, 0.1f}, // F2KEY
-        {0.85f, 0.0f, 0.1f, 0.1f}, // F3KEY
-        {-1.f, -1.f, -1.f, -1.f}, // F4KEY
-        {-1.f, -1.f, -1.f, -1.f}, // F5KEY
-        {-1.f, -1.f, -1.f, -1.f}, // F6KEY
-        {-1.f, -1.f, -1.f, -1.f}, // F7KEY
-        {-1.f, -1.f, -1.f, -1.f}, // F8KEY
-        {-1.f, -1.f, -1.f, -1.f}, // F9KEY
-        {-1.f, -1.f, -1.f, -1.f}, // F10KEY
-        {-1.f, -1.f, -1.f, -1.f}, // F11KEY
-        {-1.f, -1.f, -1.f, -1.f}, // F12KEY
+        RectF getPadRect()
+        {
+            RectF padrect = {
+                settings->vjoy_controls.pad_center.x - settings->vjoy_controls.pad_size,
+                settings->vjoy_controls.pad_center.y - settings->vjoy_controls.pad_size,
+                settings->vjoy_controls.pad_size * 2,
+                settings->vjoy_controls.pad_size * 2
+            };
+            
+            return padrect;
+        }
         
-        {-1.f, -1.f, -1.f, -1.f}, // FREEZE_FRAME_KEY
-        {-1.f, -1.f, -1.f, -1.f}, // FRAME_ADVANCE_KEY
-        {-1.f, -1.f, -1.f, -1.f}  // DEBUG_FLY_KEY
-    };
+        void process()
+        {
+            PointF p, t;
+            float scale = 1.0f;
+            
+            switch (state)
+            {
+                case EBegin:
+                {
+                    // pinch to exit
+                    if (gestureObserver.wasPinch(scale) && scale < 0.4f)
+                    {
+                        if (editEventHandler)
+                            editEventHandler->end();
+                        return;
+                    }
+                    
+                    // tap to select key
+                    int k = findTappedKey(0);
+                    if (k >= 0)
+                    {
+                        selected = k;
+                        state = ESelected;
+                        if (editEventHandler)
+                            editEventHandler->selected(k);
+                    }
+                    
+                    // tap to select pad
+                    if (gestureObserver.wasTap(getPadRect()))
+                    {
+                        state = ESelectedPad;
+                        pad_selected = true;
+                        if (editEventHandler)
+                            editEventHandler->selectedPad(true);
+                    }
+                    
+                    break;
+                }
+                case ESelected:
+                {
+                    // tap to unselect
+                    if (wasTapOnKey(selected))
+                    {
+                        // cycle through buttons
+                        int k = findTappedKey(selected + 1);
+                        if (k < 0)
+                        {
+                            k = findTappedKey(0);
+                            if (k == selected)
+                                k = -1;
+                        }
+                        
+                        if (k < 0)
+                        {
+                            // unselect
+                            selected = -1;
+                            state = EBegin;
+                            if (editEventHandler)
+                                editEventHandler->selected(-1);
+                            break;
+                        }
+                        else
+                        {
+                            // select next
+                            selected = k;
+                            if (editEventHandler)
+                                editEventHandler->selected(k);
+                            break;
+                        }
+                    }
+                    
+                    // pan to move
+                    if (gestureObserver.wasPan(p, t))
+                    {
+                        RectF& r = settings->vjoy_controls.positions[selected];
+                        //r.move(p);
+                        if (p.x - r.w/2.0f >= 0)
+                        {
+                            r.x = p.x - r.w/2.0f;
+                            r.y = p.y - r.h/2.0f;
+                        }
+                    }
+                    
+                    // pinch to scale
+                    if (gestureObserver.wasPinch(scale))
+                    {
+                        beforePinch = settings->vjoy_controls.positions[selected];
+                        state = EPinched;
+                    }
+                    
+                    break;
+                }
+                case ESelectedPad:
+                {
+                    // tap to unselect pad
+                    if (gestureObserver.wasTap(getPadRect()))
+                    {
+                        state = EBegin;
+                        pad_selected = false;
+                        if (editEventHandler)
+                            editEventHandler->selectedPad(false);
+                    }
+                    
+                    // pan to move
+                    if (gestureObserver.wasPan(p, t))
+                    {
+                        //RectF& r = settings->vjoy_controls.positions[selected];
+                        //r.move(p);
+                        //r.x = p.x - r.w/2.0f;
+                        //r.y = p.y - r.h/2.0f;
+                        settings->vjoy_controls.pad_center.x = p.x;
+                        settings->vjoy_controls.pad_center.y = p.y;
+                        VKeys::Pad::init();
+                    }
+                    
+                    // pinch to scale
+                    if (gestureObserver.wasPinch(scale))
+                    {
+                        padBeforePinch = settings->vjoy_controls.pad_size ;
+                        state = EPinchedPad;
+                    }
+                    
+                    break;
+                }
+                case EPinched:
+                {
+                    if (gestureObserver.wasPinch(scale))
+                    {
+                        settings->vjoy_controls.positions[selected] = beforePinch.scale(scale);
+                        //stat("scale = %f", scale);
+                    }
+                    if (gestureObserver.pinchEnded())
+                    {
+                        state = ESelected;
+                        //stat("Pinch ended");
+                    }
+                    break;
+                }
+                case EPinchedPad:
+                {
+                    if (gestureObserver.wasPinch(scale))
+                    {
+                        settings->vjoy_controls.pad_size = padBeforePinch * scale;
+                        //stat("scale = %f", scale);
+                        VKeys::Pad::init();
+                    }
+                    if (gestureObserver.pinchEnded())
+                    {
+                        state = ESelectedPad;
+                        //stat("Pinch ended");
+                    }
+                    break;
+                }
+            } // switch
+            
+        }
+        
+        
+    } // namespace Edit
     
-    void update_buttons(Point const& p)
+    
+    void init()
+    {
+        Pad::init();
+    }
+    
+    void update_buttons(PointF const& p)
     {
         for (int i = 0; i < INPUT_COUNT; ++i)
         {
-            if (vkeys[i].x < 0)
+            if (settings->vjoy_controls.positions[i].x < 0)
                 continue;
             
-            if (vkeys[i].point_in(p))
+            if (settings->vjoy_controls.positions[i].point_in(p))
                 inputs[i] = true;
         }
         
@@ -381,60 +645,35 @@ namespace Pad
     
     void draw()
     {
+        if (!Edit::edit_enabled && settings->vjoy_show_mode == VJoy::EShowNever)
+            return;
+        
         for (int i = 0; i < INPUT_COUNT; ++i)
         {
-            Rect const& vkey = vkeys[i];
+            RectF const& vkey = settings->vjoy_controls.positions[i];
             
             if (vkey.x < 0)
                 continue;
             
-            NXColor const& c = inputs[i] ? col_pressed : col_released;
+            if (!Edit::edit_enabled &&
+                ((inputs[i] && settings->vjoy_show_mode == VJoy::EShowUnpressed) ||
+                 (!inputs[i] && settings->vjoy_show_mode == VJoy::EShowPressed))
+                )
+                continue;
+            
+            NXColor c = inputs[i] ? col_pressed : col_released;
+            c = (Edit::edit_enabled && i == Edit::selected) ? col_pressed : c;
+            
             vkey.draw_thin_rect(c);
         }
         
         Pad::draw();
     }
     
+    
+    
 } // namespace Vkeys
 
-class GestureObserver : public IGestureObserver
-{
-    typedef std::vector<Point> tapLocation_t;
-public:
-    virtual void tap(float x, float y)
-    {
-        taps.push_back(Point(x, y));
-    }
-    
-public:
-    
-    bool wasTap(Rect const& rect)
-    {
-        for (tapLocation_t::const_iterator it = taps.begin(); it != taps.end(); ++it)
-        {
-            if (rect.point_in(*it))
-                return true;
-        }
-        
-        return false;
-    }
-    
-    bool wasTap()
-    {
-        return !taps.empty();
-    }
-    
-    void flushEvents()
-    {
-        taps.clear();
-    }
-    
-private:
-    
-    tapLocation_t taps;
-};
-
-static GestureObserver gestureObserver;
 
 namespace VJoy {
 namespace ModeAware
@@ -444,7 +683,7 @@ namespace ModeAware
     {
         DefaultControl() : disable_draw(false) {}
         virtual void on_enter() {}
-        virtual void update_buttons(Point const& p)
+        virtual void update_buttons(PointF const& p)
         {
             if (VjoyMode::EGESTURE == vjoy_mode.getMode())
                 return;
@@ -485,7 +724,7 @@ namespace ModeAware
             vjoy_mode.setMode(VjoyMode::ETOUCH);
         }
         
-        virtual void update_buttons(Point const& p)
+        virtual void update_buttons(PointF const& p)
         {
             if (textbox_mode)
             {
@@ -546,7 +785,7 @@ namespace ModeAware
             vjoy_mode.setMode(VjoyMode::getModeFromSettings(Settings::Tap::EPause));
         }
         
-        virtual void update_buttons(Point const& p)
+        virtual void update_buttons(PointF const& p)
         {
             ppads[GM_NORMAL]->update_buttons(p);
         }
@@ -558,19 +797,52 @@ namespace ModeAware
     };
     class OptionsModePad : public DefaultControl
     {
+    public:
+        
+        bool vkeys_menu;
+        bool vkeys_edit;
+        
+        OptionsModePad() : vkeys_menu(false), vkeys_edit(false) {}
+        
         virtual void on_enter()
         {
             vjoy_mode.setMode(VjoyMode::getModeFromSettings(Settings::Tap::EOptions));
         }
         
-        virtual void update_buttons(Point const& p)
+        virtual void update_buttons(PointF const& p)
         {
-            ppads[GM_NORMAL]->update_buttons(p);
+            //ppads[GM_NORMAL]->update_buttons(p);
+            if (vkeys_menu)
+            {
+                //VKeys::draw();
+            }
+            else if (vkeys_edit)
+            {
+                //VKeys::draw();
+            }
+            else
+            {
+                DefaultControl::update_buttons(p);
+            }
         }
         
         virtual void draw()
         {
-            ppads[GM_NORMAL]->draw();
+            //ppads[GM_NORMAL]->draw();
+            
+            if (vkeys_menu)
+            {
+                VKeys::draw();
+            }
+            else if (vkeys_edit)
+            {
+                VKeys::draw();
+            }
+            else
+            {
+                DefaultControl::draw();
+            }
+            
         }
     };
     
@@ -600,7 +872,7 @@ namespace ModeAware
         &optionsModePad
     };
     
-    static void dispatch(Point const& p)
+    static void dispatch(PointF const& p)
     {
         pads[getGamemode()]->update_buttons(p);
     }
@@ -616,7 +888,7 @@ namespace ModeAware
         if (VjoyMode::ETOUCH == vjoy_mode.getMode())
             return false;
         
-        return gestureObserver.wasTap(Rect::fromRectI(rect));
+        return gestureObserver.wasTap(RectF::fromRectI(rect));
     }
     
     bool wasTap()
@@ -646,6 +918,10 @@ namespace ModeAware
                 GameModes gm;
                 bool gm_draw;
                 bool normal_textbox_mode;
+                bool options_vkeys_menu;
+                bool options_vkeys_edit;
+                NXColor col_pressed;
+                NXColor col_released;
                 
                 void push()
                 {
@@ -653,6 +929,10 @@ namespace ModeAware
                     gm = getGamemode();
                     gm_draw = pads[gm]->disable_draw;
                     normal_textbox_mode = static_cast<NormalModePad*>(pads[GM_NORMAL])->textbox_mode;
+                    options_vkeys_menu = static_cast<OptionsModePad*>(pads[GP_OPTIONS])->vkeys_menu;
+                    options_vkeys_edit = static_cast<OptionsModePad*>(pads[GP_OPTIONS])->vkeys_edit;
+                    this->col_pressed = ::col_pressed;
+                    this->col_released = ::col_released;
                 }
                 
                 void pop()
@@ -660,6 +940,10 @@ namespace ModeAware
                     vjoy_mode.setMode(mode);
                     pads[gm]->disable_draw = gm_draw;
                     static_cast<NormalModePad*>(pads[GM_NORMAL])->textbox_mode = normal_textbox_mode;
+                    static_cast<OptionsModePad*>(pads[GP_OPTIONS])->vkeys_menu = options_vkeys_menu;
+                    VKeys::Edit::edit_enabled = static_cast<OptionsModePad*>(pads[GP_OPTIONS])->vkeys_edit = options_vkeys_edit;
+                    ::col_pressed = this->col_pressed;
+                    ::col_released = this->col_released;
                 }
             };
             
@@ -679,6 +963,14 @@ namespace ModeAware
                 s = states.top();
                 s.pop();
                 states.pop();
+                
+                switch (newScreen)
+                {
+                    case EOptsVkeyEdit:
+                        vjoy_mode.specialGestures(false);
+                        break;
+                }
+                
                 return;
             }
         }
@@ -714,27 +1006,72 @@ namespace ModeAware
                 static_cast<NormalModePad*>(pads[GM_NORMAL])->textbox_mode = (vjoy_mode.getMode() != VjoyMode::ETOUCH);
                 break;
             }
+            case EOptsVkeyMenu:
+            {
+                vjoy_mode.setMode(VjoyMode::EGESTURE);
+                static_cast<OptionsModePad*>(pads[GP_OPTIONS])->vkeys_menu = true;
+                col_pressed = edit_col_pressed;
+                col_released = edit_col_released;
+                break;
+            }
+            case EOptsVkeyEdit:
+            {
+                vjoy_mode.setMode(VjoyMode::EGESTURE);
+                static_cast<OptionsModePad*>(pads[GP_OPTIONS])->vkeys_menu = false;
+                VKeys::Edit::edit_enabled = static_cast<OptionsModePad*>(pads[GP_OPTIONS])->vkeys_edit = true;
+                col_pressed = edit_col_pressed;
+                col_released = edit_col_released;
+                
+                vjoy_mode.specialGestures(true);
+                
+                break;
+            }
         }
         
     }
     
 } // namespace ModeAware
-} // namespace VJoy
 
 
-bool  VJoy::Init()
+    
+Preset const& getPreset(size_t num)
+{
+    if (num >= VKeys::presets_count)
+        num = 0;
+    
+    return VKeys::presets[num];
+}
+
+size_t VJoy::getPresetsCount()
+{
+    return VKeys::presets_count;
+}
+
+void setFromPreset(size_t num)
+{
+    settings->vjoy_controls = getPreset(num);
+    settings->vjoy_current_preset = num;
+    setUpdated();
+}
+    
+void setUpdated()
+{
+    VKeys::init();
+}
+
+bool  Init()
 {
     vjoy_enabled = true;
     registerGetureObserver(&gestureObserver);
     return true;
 }
 
-void VJoy::Destroy()
+void Destroy()
 {
     vjoy_enabled = false;
 }
 
-void VJoy::DrawAll()
+void DrawAll()
 {
     if (!(vjoy_enabled && vjoy_visible))
         return;
@@ -745,15 +1082,15 @@ void VJoy::DrawAll()
     
     for (lastFingerPos_t::const_iterator it = lastFingerPos.begin(); it != lastFingerPos.end(); ++it)
     {
-        Point const& p = it->second;
-        Rect r = Rect::centred(p, 0.04f, 0.04f);
+        PointF const& p = it->second;
+        RectF r = RectF::centred(p, 0.04f, 0.04f);
         
         const NXColor col(0xff, 0xcf, 0x33);
         r.draw_fill_rect(col);
     }
 }
 
-void VJoy::InjectInputEvent(SDL_Event const & evt)
+void InjectInputEvent(SDL_Event const & evt)
 {
     if (!vjoy_enabled)
         return;
@@ -785,14 +1122,14 @@ void VJoy::InjectInputEvent(SDL_Event const & evt)
         }
     }
     
-    Point p((float)evt.tfinger.x / xres, (float)evt.tfinger.y / yres);
+    PointF p((float)evt.tfinger.x / xres, (float)evt.tfinger.y / yres);
     
     
     if (ignoredFingers.end() == ignoredFingers.find(evt.tfinger.fingerId))
         lastFingerPos[evt.tfinger.fingerId] = p;
 }
 
-void VJoy::PreProcessInput()
+void PreProcessInput()
 {
     if (!vjoy_enabled)
         return;
@@ -800,7 +1137,7 @@ void VJoy::PreProcessInput()
     gestureObserver.flushEvents();
 }
 
-void VJoy::ProcessInput()
+void ProcessInput()
 {
     if (!vjoy_enabled)
         return;
@@ -810,12 +1147,17 @@ void VJoy::ProcessInput()
     
     for (lastFingerPos_t::const_iterator it = lastFingerPos.begin(); it != lastFingerPos.end(); ++it)
     {
-        Point const& p = it->second;
+        PointF const& p = it->second;
         ModeAware::dispatch(p);
+    }
+    
+    if (VKeys::Edit::edit_enabled)
+    {
+        VKeys::Edit::process();
     }
 }
 
-void VJoy::ignoreAllCurrentFingers()
+void ignoreAllCurrentFingers()
 {
     for (lastFingerPos_t::const_iterator it = lastFingerPos.begin(); it != lastFingerPos.end(); ++it)
     {
@@ -824,6 +1166,23 @@ void VJoy::ignoreAllCurrentFingers()
     
     lastFingerPos.clear();
 }
+    
+void setEditEventHandler(IEditEventHandler* handler)
+{
+    VKeys::Edit::editEventHandler = handler;
+}
+    
+
+    void setShowMode(ShowMode newmode)
+    {
+        settings->vjoy_show_mode = newmode;
+    }
+    
+    ShowMode getShowMode()
+    {
+        return static_cast<ShowMode>(settings->vjoy_show_mode);
+    }
+} // namespace VJoy
 
 #endif // CONFIG_USE_VJOY
 

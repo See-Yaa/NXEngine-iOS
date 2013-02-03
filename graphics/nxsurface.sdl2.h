@@ -23,7 +23,7 @@ struct NXColor
 		: r(rr), g(gg), b(bb)
 	{ }
 	
-	NXColor(uint32_t hexcolor)
+	NXColor(uint32_t hexcolor = 0)
 	{
 		r = hexcolor >> 16;
 		g = hexcolor >> 8;
