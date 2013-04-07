@@ -1,0 +1,13 @@
+
+<html><head>
+{% capture lvl %}{{ page.url | append:'index.html' | split:'/' | size }}{% endcapture %}
+{% capture relative %}{% for i in (3..lvl) %}../{% endfor %}{% endcapture %}
+<link rel="stylesheet" type="text/css" href="{{ relative }}iPhone.css"/>
+<meta content="text/html; charset=utf-8" http-equiv="Content-Type" />
+<meta content="minimum-scale=1.0, width=device-width, maximum-scale=0.6667, user-scalable=no" name="viewport" />
+<meta name="viewport" content="width=device-width, minimum-scale=1.0, maximum-scale=1.0"/>
+</head>
+<body><panel><fieldset style="clear:both"><div><p>
+{{ content }}
+</p></div></fieldset></panel>
+</body></html>
